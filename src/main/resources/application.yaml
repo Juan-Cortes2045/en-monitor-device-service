@@ -27,6 +27,55 @@ server:
   # run on the same machine.
   port: ${SERVER_PORT:8084}
 
+security:
+  jwt:
+    # The access tokens are issued by the security service; this service only validates them, with
+    # the service's public key and its iss claim (the value the monolith used, kept unchanged).
+    issuer: https://energy-monitor-backend
+    public-key-path: ${SECURITY_JWT_PUBLIC_KEY_PATH:}
+
+# Calls from this service to energy-monitor-backend: whether a caller belongs to or owns a home.
+# The backend checks the caller's network and the shared token; the reverse proxy never forwards
+# /internal/**. No answer within the timeouts refuses the request with 503.
+internal-api:
+  # Same value in every service. Generate with: openssl rand -hex 32
+  token: ${INTERNAL_API_TOKEN:}
+  backend-url: ${BACKEND_INTERNAL_URL:http://localhost:8083}
+  connect-timeout: PT1S
+  read-timeout: PT2S
+
+mqtt:
+  # This service connects over the plain listener: the broker runs next to it, so this connection
+  # never leaves the host; devices use TLS.
+  broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
+  # Suffixed per client (-commands). Must differ per instance and from energy-monitor-backend's.
+  client-id: ${MQTT_CLIENT_ID:device-service}
+  # Also the credentials the broker accepts for this service: the broker asks
+  # /internal/mqtt/auth/user, and these are compared there, so they live in one place.
+  username: ${MQTT_DEVICE_SERVICE_USER:em-device-service}
+  password: ${MQTT_DEVICE_SERVICE_PASS:}
+  broker-auth:
+    # energy-monitor-backend's broker credentials (its MQTT_BACKEND_USER and MQTT_BACKEND_PASS):
+    # it may only read the telemetry and status of every device.
+    backend-username: ${MQTT_BACKEND_USER:em-backend}
+    backend-password: ${MQTT_BACKEND_PASS:}
+    # Addresses allowed to call /internal/mqtt/auth/**: loopback and the private range Docker
+    # uses, where the broker container lives. Narrow it in production if the network allows it.
+    allowed-networks: ${MQTT_AUTH_ALLOWED_NETWORKS:127.0.0.1/32,::1/128,172.16.0.0/12}
+
+device:
+  connectivity:
+    # A device not heard from for this long is marked OFFLINE. Telemetry comes every 60 s at
+    # QoS 0, so one lost sample plus network jitter is tolerated before declaring it gone.
+    offline-after: ${DEVICE_OFFLINE_AFTER:PT150S}
+    check-interval: PT30S
+  provisioning:
+    # Broker address the web app writes to a module over Bluetooth when linking it. It must be
+    # reachable from the home network: the LAN IP of this PC in development, the public domain
+    # of the broker in production. Never localhost.
+    mqtt-host: ${DEVICE_MQTT_PUBLIC_HOST:}
+    mqtt-port: ${DEVICE_MQTT_PUBLIC_PORT:8883}
+
 management:
   endpoints:
     web:
