@@ -6,6 +6,7 @@ import com.energymonitor.device.application.port.out.DeviceStatusLogPersistenceP
 import com.energymonitor.device.application.port.out.IdentifierGeneratorPort;
 import com.energymonitor.device.application.usecase.BrokerAccessService;
 import com.energymonitor.device.application.usecase.DeviceConnectivityService;
+import com.energymonitor.device.application.usecase.DeviceReportService;
 import java.time.Clock;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +30,12 @@ public class DeviceServiceConfiguration {
             Clock clock,
             @Value("${device.connectivity.offline-after:PT150S}") Duration offlineAfter) {
         return new DeviceConnectivityService(statusLogs, identifiers, events, clock, offlineAfter);
+    }
+
+    @Bean
+    public DeviceReportService deviceReportService(DevicePersistencePort devices,
+                                                   DeviceConnectivityService connectivity) {
+        return new DeviceReportService(devices, connectivity);
     }
 
     /**
