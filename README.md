@@ -27,6 +27,23 @@ The broker knows three kinds of client: this service (`MQTT_DEVICE_SERVICE_USER`
 that writes commands), energy-monitor-backend (`MQTT_BACKEND_USER`, reads telemetry and status)
 and the devices (device code and API key, only their own topics).
 
+## Connectivity
+
+This service subscribes to `energy-monitor/devices/+/telemetry` and `energy-monitor/devices/+/status`
+with its own MQTT user and client ids (`${MQTT_CLIENT_ID}-telemetry` and `-status`):
+
+- every telemetry message marks the device `ONLINE` and refreshes `last_seen` with the server
+  clock (the reading itself is stored by energy-monitor-backend, which subscribes to the same
+  topic);
+- the retained `online` / `offline` status, including the last will the broker publishes when a
+  module drops, opens a new row in `device_status_log`;
+- a device not heard from for `DEVICE_OFFLINE_AFTER` (150 s) is marked `OFFLINE` by the
+  inactivity check every 30 s.
+
+The topic, not the payload, identifies the device; a message from an unregistered device, on an
+unexpected topic or that does not parse is logged and dropped. `mqtt.inbound.enabled=false` turns
+the subscriptions off (the test profile does).
+
 ## Requirements
 
 - Java 21 (the repository brings `./mvnw`, no Maven install needed).
