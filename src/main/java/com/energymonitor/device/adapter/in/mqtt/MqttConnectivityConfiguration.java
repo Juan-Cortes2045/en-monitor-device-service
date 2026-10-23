@@ -3,6 +3,7 @@ package com.energymonitor.device.adapter.in.mqtt;
 import com.energymonitor.device.application.port.in.ReceiveDeviceReport;
 import java.time.Duration;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -107,14 +108,19 @@ public class MqttConnectivityConfiguration {
         return new DirectChannel();
     }
 
+    // The channels are injected, not obtained by calling their @Bean methods: without bean method
+    // proxies such a call returns a new, unnamed channel with no subscriber, and every message
+    // would fail to be delivered (and Paho would drop the connection on it).
     @Bean
-    public MessageProducer inboundTelemetry(MqttPahoClientFactory factory) {
-        return inbound(factory, "-telemetry", telemetryTopic, mqttTelemetryChannel());
+    public MessageProducer inboundTelemetry(MqttPahoClientFactory factory,
+                                            @Qualifier(TELEMETRY_CHANNEL) MessageChannel channel) {
+        return inbound(factory, "-telemetry", telemetryTopic, channel);
     }
 
     @Bean
-    public MessageProducer inboundStatus(MqttPahoClientFactory factory) {
-        return inbound(factory, "-status", statusTopic, mqttStatusChannel());
+    public MessageProducer inboundStatus(MqttPahoClientFactory factory,
+                                         @Qualifier(STATUS_CHANNEL) MessageChannel channel) {
+        return inbound(factory, "-status", statusTopic, channel);
     }
 
     @Bean
