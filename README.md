@@ -68,6 +68,21 @@ What other services need to know about a device is published on the topic exchan
   when it is reachable (export `RABBITMQ_USERNAME` and `RABBITMQ_PASSWORD`) and is skipped
   otherwise.
 
+### Events it consumes
+
+| Queue | Exchange and routing key | What it does |
+|---|---|---|
+| `device-service.device.home-deleted` | `energy-monitor.home`, `home.deleted` | Unlinks every module of the deleted home, revokes their API keys, sends each the MQTT unlink command after commit and announces `device.unlinked` |
+
+- The queue is declared here at startup, durable, with a `.dlq` dead-letter queue on
+  `device-service.dlx`: a message that fails three attempts (1, 2 and 4 s apart) is moved there
+  instead of blocking the queue. A message without a `homeId` is dropped.
+- A message may arrive twice: the second delivery finds no module linked to the home and does
+  nothing.
+- Declaring the queue is what lets energy-monitor-backend publish `home.deleted`: until it exists,
+  the message waits in the backend's `home_outbox`.
+- The test profile does not start the consumers.
+
 ## Requirements
 
 - Java 21 (the repository brings `./mvnw`, no Maven install needed).
