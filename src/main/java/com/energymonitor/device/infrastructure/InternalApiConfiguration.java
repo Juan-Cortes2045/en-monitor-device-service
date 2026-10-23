@@ -7,12 +7,27 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.client.RestClient;
 
 /**
- * The calls from this service to energy-monitor-backend: whether a caller belongs to or owns a
- * home. They carry the shared token, which the backend checks together with the caller's network.
+ * The calls between this service and energy-monitor-backend, both ways.
+ *
+ * <p>Inbound, {@code /internal/devices/**} and {@code /internal/homes/**} get their own filter
+ * chain, evaluated before the API chain: the backend presents no JWT, so it is trusted by network
+ * and shared token instead (see {@link InternalCallerCheck}). Anything else is answered 403. The
+ * broker's {@code /internal/mqtt/**} has a chain of its own, by network only. The reverse proxy
+ * must not forward {@code /internal/**} at all, since behind it every request seems to come from
+ * the proxy.
+ *
+ * <p>Outbound, whether a caller belongs to or owns a home. Those calls carry the same token, which
+ * the backend checks together with this service's network.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(InternalApiProperties.class)
@@ -21,9 +36,27 @@ public class InternalApiConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(InternalApiConfiguration.class);
 
     @Bean
+    @Order(2)
+    public SecurityFilterChain internalApiFilterChain(HttpSecurity http, InternalApiProperties properties)
+            throws Exception {
+        InternalCallerCheck callers = new InternalCallerCheck(properties);
+        return http
+                .securityMatcher("/internal/devices/**", "/internal/homes/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(requests -> requests
+                        .anyRequest().access((authentication, context) ->
+                                new AuthorizationDecision(callers.trusts(context.getRequest()))))
+                .build();
+    }
+
+    @Bean
     public HomeLookupPort homeLookup(InternalApiProperties properties) {
         if (properties.token() == null || properties.token().isBlank()) {
-            LOG.warn("internal-api.token is empty: energy-monitor-backend will refuse every home check");
+            LOG.warn("internal-api.token is empty: every internal call is refused, both ways");
         }
         SimpleClientHttpRequestFactory requests = new SimpleClientHttpRequestFactory();
         requests.setConnectTimeout(properties.connectTimeout());
