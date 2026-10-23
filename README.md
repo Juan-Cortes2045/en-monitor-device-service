@@ -5,8 +5,8 @@ MQTT credentials, authenticates the broker (Mosquitto go-auth), tracks device co
 publishes its events over RabbitMQ. Spring Boot 4, Java 21, hexagonal architecture.
 
 It was extracted from the `device` module of `energy-monitor-backend`, following the same steps as
-the security service. The design is in [`docs/Architecture.md`](docs/Architecture.md) and the
-decision in [`docs/adr/ADR-001-extract-the-device-service.md`](docs/adr/ADR-001-extract-the-device-service.md).
+the security service. The design and the decisions are in
+[`docs/Architecture.md`](docs/Architecture.md).
 
 ## What it serves
 

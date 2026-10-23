@@ -104,9 +104,22 @@ readings: one topic, two consumers, each with its own client id.
   `DATABASECHANGELOG` holds every service's changesets; each applies only its own.
 - `home_id` references a home by identifier only: no foreign key across services.
 
-## Migration status
+## Decisions
 
-The decision is in [ADR-001](adr/ADR-001-extract-the-device-service.md).
+The platform decisions (shared schema, event transport, gateway, MQTT broker) are the ADRs of
+`en-monitor-docs` (`05-architecture/decisions`). The ones taken for this extraction:
+
+- **Full migration**: endpoints, broker authentication, commands, connectivity and their tables
+  move here; the backend keeps a cached proxy, like the one of the security service.
+- **Connectivity from MQTT**: this service subscribes to telemetry and status with its own broker
+  user, so device state does not depend on the backend.
+- **Reads over internal HTTP with a cache**: the backend caches devices 30 s (unknown ones too)
+  and falls back to a stale copy up to 1 h, instead of reading the device tables.
+- **Home deletion as an event**: `home.deleted` from the backend's outbox, not a synchronous call.
+- **Trade-off**: Mosquitto depends on this service. While it is down new MQTT logins are refused
+  and connected modules publish only while the broker's cached ACL decisions last (5 min).
+
+## Migration status
 
 | Phase | Content | Status |
 |---|---|---|
