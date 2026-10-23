@@ -7,18 +7,39 @@ publishes its events over RabbitMQ. Spring Boot 4, Java 21, hexagonal architectu
 It is being extracted from the `device` module of `energy-monitor-backend`, following the same
 steps as the security service.
 
+## What it serves
+
+| Path | Who calls it | What it does |
+|---|---|---|
+| `GET /api/v1/homes/{homeId}/devices` | web and mobile, through the gateway | Devices of a home (any member) |
+| `POST /api/v1/homes/{homeId}/devices` | idem | Links a module and returns its API key and the broker address (owner) |
+| `PUT /api/v1/homes/{homeId}/devices/{deviceId}` | idem | Edits name, appliance and room (owner) |
+| `POST /api/v1/homes/{homeId}/devices/{deviceId}/credentials` | idem | New API key, for a new Wi-Fi network (owner) |
+| `DELETE /api/v1/homes/{homeId}/devices/{deviceId}` | idem | Unlinks the module and tells it over MQTT (owner) |
+| `GET /api/v1/appliance-types` | idem | Appliance catalogue |
+| `POST /internal/mqtt/auth/user`, `/acl` | Mosquitto (go-auth) | Who may connect and what each client may read or write |
+
+Whether the caller is a member or the owner of the home is asked to energy-monitor-backend
+(`GET /internal/homes/{homeId}/access`, with `X-Internal-Token`). Without an answer the request
+gets 503.
+
+The broker knows three kinds of client: this service (`MQTT_DEVICE_SERVICE_USER`, the only one
+that writes commands), energy-monitor-backend (`MQTT_BACKEND_USER`, reads telemetry and status)
+and the devices (device code and API key, only their own topics).
+
 ## Requirements
 
 - Java 21 (the repository brings `./mvnw`, no Maven install needed).
-- MySQL from the `infra` repository: the schema is shared with `energy-monitor-backend` and the
-  security service.
+- MySQL and Mosquitto from the `infra` repository: the schema is shared with
+  `energy-monitor-backend` and the security service.
+- The public key of the security service (`SECURITY_JWT_PUBLIC_KEY_PATH`).
 
 ## Run locally
 
 ```bash
 cp .env.example .env
 cp src/main/resources/application-local.yaml.example src/main/resources/application-local.yaml
-# set the MYSQL_PASSWORD of infra/.env in both files
+# set the MYSQL_PASSWORD of infra/.env, the public key path, INTERNAL_API_TOKEN and the MQTT users
 ./mvnw spring-boot:run          # http://localhost:8084/actuator/health
 ```
 
@@ -28,4 +49,10 @@ cp src/main/resources/application-local.yaml.example src/main/resources/applicat
 SPRING_DATASOURCE_PASSWORD=... ./mvnw test
 ```
 
-The tests run under the `test` profile against the MySQL of `infra`.
+The tests run under the `test` profile against the MySQL of `infra`, with a key pair generated
+for the run. They never reach a running backend or broker.
+
+## Database
+
+The changelogs `device-001` to `device-008` keep the path they had in energy-monitor-backend, so
+on a database the monolith already migrated Liquibase recognises them as applied.
