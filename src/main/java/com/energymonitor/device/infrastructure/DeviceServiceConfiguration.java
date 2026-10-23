@@ -1,5 +1,6 @@
 package com.energymonitor.device.infrastructure;
 
+import com.energymonitor.device.application.port.in.RecordDeviceConnectivity;
 import com.energymonitor.device.application.port.out.DeviceEventPort;
 import com.energymonitor.device.application.port.out.DevicePersistencePort;
 import com.energymonitor.device.application.port.out.DeviceStatusLogPersistencePort;
@@ -13,6 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Beans of the use cases that carry no Spring annotation, and the scheduling of the inactivity
@@ -22,19 +25,26 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class DeviceServiceConfiguration {
 
+    /**
+     * The connectivity use case, wrapped so every call is one transaction: the status row and its
+     * outbox message commit together.
+     */
     @Bean
-    public DeviceConnectivityService deviceConnectivityService(
+    public TransactionalDeviceConnectivity deviceConnectivity(
             DeviceStatusLogPersistencePort statusLogs,
             IdentifierGeneratorPort identifiers,
             DeviceEventPort events,
             Clock clock,
+            PlatformTransactionManager transactions,
             @Value("${device.connectivity.offline-after:PT150S}") Duration offlineAfter) {
-        return new DeviceConnectivityService(statusLogs, identifiers, events, clock, offlineAfter);
+        return new TransactionalDeviceConnectivity(
+                new DeviceConnectivityService(statusLogs, identifiers, events, clock, offlineAfter),
+                new TransactionTemplate(transactions));
     }
 
     @Bean
     public DeviceReportService deviceReportService(DevicePersistencePort devices,
-                                                   DeviceConnectivityService connectivity) {
+                                                   RecordDeviceConnectivity connectivity) {
         return new DeviceReportService(devices, connectivity);
     }
 
