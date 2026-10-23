@@ -25,6 +25,9 @@ mqtt:
   # same id, so a test must never use the running service's.
   client-id: device-service-test
   password: test-only-mqtt-password
+  inbound:
+    # No subscription in the suite: the handlers are tested directly.
+    enabled: false
 
 device:
   connectivity:

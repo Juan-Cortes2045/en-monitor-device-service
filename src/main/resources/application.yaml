@@ -48,12 +48,24 @@ mqtt:
   # This service connects over the plain listener: the broker runs next to it, so this connection
   # never leaves the host; devices use TLS.
   broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
-  # Suffixed per client (-commands). Must differ per instance and from energy-monitor-backend's.
+  # Suffixed per client (-commands, -telemetry, -status). Must differ per instance and from
+  # energy-monitor-backend's, which subscribes to the same topics.
   client-id: ${MQTT_CLIENT_ID:device-service}
   # Also the credentials the broker accepts for this service: the broker asks
   # /internal/mqtt/auth/user, and these are compared there, so they live in one place.
   username: ${MQTT_DEVICE_SERVICE_USER:em-device-service}
   password: ${MQTT_DEVICE_SERVICE_PASS:}
+  # Subscriptions for the connectivity (suffixed -telemetry and -status): every telemetry message
+  # refreshes last_seen, and the retained status messages, last will included, set ONLINE/OFFLINE.
+  inbound:
+    enabled: true
+  topics:
+    telemetry: energy-monitor/devices/+/telemetry
+    status: energy-monitor/devices/+/status
+  qos: 0
+  keep-alive-interval: 60
+  clean-session: true
+  connection-timeout: 30
   broker-auth:
     # energy-monitor-backend's broker credentials (its MQTT_BACKEND_USER and MQTT_BACKEND_PASS):
     # it may only read the telemetry and status of every device.
