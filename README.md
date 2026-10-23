@@ -4,8 +4,9 @@ EnergyMonitor device microservice: links ESP32 + PZEM-004T meters to homes, issu
 MQTT credentials, authenticates the broker (Mosquitto go-auth), tracks device connectivity and
 publishes its events over RabbitMQ. Spring Boot 4, Java 21, hexagonal architecture.
 
-It is being extracted from the `device` module of `energy-monitor-backend`, following the same
-steps as the security service.
+It was extracted from the `device` module of `energy-monitor-backend`, following the same steps as
+the security service. The design and the decisions are in
+[`docs/Architecture.md`](docs/Architecture.md).
 
 ## What it serves
 
