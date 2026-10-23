@@ -40,6 +40,20 @@ The broker knows three kinds of client: this service (`MQTT_DEVICE_SERVICE_USER`
 that writes commands), energy-monitor-backend (`MQTT_BACKEND_USER`, reads telemetry and status)
 and the devices (device code and API key, only their own topics).
 
+## Behind the gateway
+
+Web and mobile requests arrive through the API gateway (`/api/v1/homes/*/devices/**`,
+`/api/v1/appliance-types/**`), which validates the token first; this service validates it again.
+From loopback or a Docker network (`172.16.0.0/12`) the container takes the caller's address and
+scheme from `X-Forwarded-For` / `X-Forwarded-Proto` (`server.forward-headers-strategy=native`,
+`server.tomcat.remoteip.internal-proxies`); any other private network is not trusted, so a machine
+of the LAN cannot pass as `127.0.0.1`.
+
+The internal API and the broker authentication check that address: a request relayed from outside
+counts as the outside caller and is refused, even if it forwards `127.0.0.1`. The gateway never
+forwards `/internal/**`; the backend and Mosquitto call this service directly over the Docker
+network. `BehindGatewayTest` checks it on a running server.
+
 ## Connectivity
 
 This service subscribes to `energy-monitor/devices/+/telemetry` and `energy-monitor/devices/+/status`

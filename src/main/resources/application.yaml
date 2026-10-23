@@ -48,6 +48,17 @@ server:
   # 8080 is the API gateway, 8082 the security service and 8083 energy-monitor-backend when all
   # run on the same machine.
   port: ${SERVER_PORT:8084}
+  # The web and mobile requests come through the API gateway: from it (loopback or a Docker
+  # network) the container takes the caller's address and scheme from X-Forwarded-For and
+  # X-Forwarded-Proto. A call from outside relayed with a forwarded address therefore counts as
+  # that address, and the internal API and the broker authentication refuse it.
+  forward-headers-strategy: native
+  tomcat:
+    # Only loopback (the gateway or nginx on this machine) and the Docker networks may set it: the
+    # default would trust every private network, and a machine of the LAN could then pass as
+    # 127.0.0.1.
+    remoteip:
+      internal-proxies: "127\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|0:0:0:0:0:0:0:1|::1|172\\.(1[6-9]|2[0-9]|3[0-1])\\.\\d{1,3}\\.\\d{1,3}"
 
 messaging:
   # Topic exchange of everything this service announces; the routing keys are the message types
