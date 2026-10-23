@@ -135,6 +135,26 @@ SPRING_DATASOURCE_PASSWORD=... ./mvnw test
 The tests run under the `test` profile against the MySQL of `infra`, with a key pair generated
 for the run. They never reach a running backend or broker.
 
+## Docker and CI/CD
+
+```bash
+docker build -t energy-monitor-device .
+```
+
+Multi-stage build (Maven on JDK 21, then JRE 21), running as uid 10001. The infra repository
+builds it as `device` (`infra/docker-compose.yml`, `infra/docker-compose.prod.yml`): no published
+port, `public.pem` only, health on `/actuator/health`. Mosquitto, the gateway and the backend
+reach it as `device:8084`.
+
+`.github/workflows/ci-cd.yml`:
+
+- on every pull request and push to `dev` and `main`: `./mvnw test` against a MySQL 8.4 service of
+  the runner (no RabbitMQ or broker needed), and `docker build`;
+- after a push to `main`, and the approval of the `production` environment: `infra/deploy/deploy.sh
+  device` over SSH, which rebuilds only this container and waits for every service to be healthy,
+  then a smoke test through the gateway. The environment needs the same secrets as the other
+  repositories: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS`.
+
 ## Database
 
 The changelogs `device-001` to `device-008` keep the path they had in energy-monitor-backend, so
