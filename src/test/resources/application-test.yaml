@@ -41,6 +41,11 @@ messaging:
   relay-enabled: false
   discard-written: true
 
+spring.rabbitmq.listener.simple:
+  # A test context must not take messages from a queue a running service consumes. The consumers
+  # are exercised by calling them directly.
+  auto-startup: false
+
 management:
   health:
     # No broker is required to run the suite.
