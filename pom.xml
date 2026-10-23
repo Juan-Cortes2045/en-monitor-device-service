@@ -70,6 +70,12 @@
 			<version>${springdoc.version}</version>
 		</dependency>
 
+		<!-- MQTT subscriptions: the status and telemetry topics, for connectivity -->
+		<dependency>
+			<groupId>org.springframework.integration</groupId>
+			<artifactId>spring-integration-mqtt</artifactId>
+		</dependency>
+
 		<!-- MQTT client: the commands sent to the modules -->
 		<dependency>
 			<groupId>org.eclipse.paho</groupId>
