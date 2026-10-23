@@ -19,6 +19,19 @@ steps as the security service.
 | `GET /api/v1/appliance-types` | idem | Appliance catalogue |
 | `POST /internal/mqtt/auth/user`, `/acl` | Mosquitto (go-auth) | Who may connect and what each client may read or write |
 
+### Internal API (for energy-monitor-backend)
+
+| Path | Answer |
+|---|---|
+| `GET /internal/devices/{deviceId}` | `200` with `{idDevice, name, applianceTypeId, location, description, installationDate, deviceCode, homeId}` (`homeId` null when it is linked to no home), or `404` |
+| `GET /internal/homes/{homeId}/devices` | `200` with the devices linked to the home, an empty list when it has none |
+
+The backend reads them for the ingestion of readings, the alerts, the notifications and the
+recommendations. These paths have their own filter chain: the caller must come from
+`INTERNAL_API_ALLOWED_NETWORKS` **and** send `INTERNAL_API_TOKEN` in `X-Internal-Token`; without a
+token configured every call is refused. A user's access token does not open them. The reverse proxy
+and the gateway never forward `/internal/**`.
+
 Whether the caller is a member or the owner of the home is asked to energy-monitor-backend
 (`GET /internal/homes/{homeId}/access`, with `X-Internal-Token`). Without an answer the request
 gets 503.
