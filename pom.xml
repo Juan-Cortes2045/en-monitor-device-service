@@ -70,6 +70,13 @@
 			<version>${springdoc.version}</version>
 		</dependency>
 
+		<!-- MQTT client: the commands sent to the modules -->
+		<dependency>
+			<groupId>org.eclipse.paho</groupId>
+			<artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+			<version>1.2.5</version>
+		</dependency>
+
 		<!-- Database -->
 		<dependency>
 			<groupId>com.mysql</groupId>
