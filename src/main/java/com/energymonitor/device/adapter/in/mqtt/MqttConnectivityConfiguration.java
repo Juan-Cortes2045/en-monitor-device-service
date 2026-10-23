@@ -1,6 +1,7 @@
 package com.energymonitor.device.adapter.in.mqtt;
 
 import com.energymonitor.device.application.port.in.ReceiveDeviceReport;
+import java.time.Duration;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -69,6 +70,14 @@ public class MqttConnectivityConfiguration {
     @Value("${mqtt.clean-session:true}")
     private boolean cleanSession;
 
+    /**
+     * How long a subscribe, unsubscribe or disconnect may wait for the broker, and how long a
+     * stopping adapter lets in-flight work finish. Paho's defaults are 30 s each per adapter, so a
+     * service stopping while the broker is down would hang for a minute.
+     */
+    @Value("${mqtt.completion-timeout:PT5S}")
+    private Duration completionTimeout;
+
     @Bean
     public MqttPahoClientFactory mqttClientFactory() {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
@@ -119,6 +128,9 @@ public class MqttConnectivityConfiguration {
         MqttPahoMessageDrivenChannelAdapter adapter =
                 new MqttPahoMessageDrivenChannelAdapter(clientId + suffix, factory, topic);
         adapter.setQos(qos);
+        adapter.setCompletionTimeout(completionTimeout.toMillis());
+        adapter.setDisconnectCompletionTimeout(completionTimeout.toMillis());
+        adapter.setQuiescentTimeout(completionTimeout.toMillis());
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setOutputChannel(channel);
         return adapter;

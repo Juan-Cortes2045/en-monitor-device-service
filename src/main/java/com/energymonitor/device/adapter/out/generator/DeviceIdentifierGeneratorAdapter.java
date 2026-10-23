@@ -14,6 +14,7 @@ public class DeviceIdentifierGeneratorAdapter implements IdentifierGeneratorPort
 
     private static final String DEVICE_PREFIX = "dev";
     private static final String STATUS_PREFIX = "dss";
+    private static final String MESSAGE_PREFIX = "dmo";
     private static final int ID_LENGTH = 10;
     private final SecureRandom random = new SecureRandom();
 
@@ -25,6 +26,14 @@ public class DeviceIdentifierGeneratorAdapter implements IdentifierGeneratorPort
     @Override
     public String nextDeviceStatusLogId() {
         return generate(STATUS_PREFIX);
+    }
+
+    /**
+     * The id of an outbox message, also its message id on the broker. Only the outbox adapter
+     * needs it, so it is not part of {@link IdentifierGeneratorPort}.
+     */
+    public String nextMessageId() {
+        return generate(MESSAGE_PREFIX);
     }
 
     @Override

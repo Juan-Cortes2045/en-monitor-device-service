@@ -22,10 +22,32 @@ spring:
     # changelogs.
     change-log: classpath:db/changelog/db.changelog-master.xml
 
+  # Message broker (RabbitMQ, from infra): the device events this service announces, and the
+  # home events it consumes. Each consumer declares and binds its own queue.
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:energy-monitor}
+    password: ${RABBITMQ_PASSWORD:}
+    # A message is marked as published only after the broker confirms it and a queue took it
+    # (correlated: the return of an unrouted message is known before the confirmation completes).
+    publisher-confirm-type: correlated
+    publisher-returns: true
+
 server:
   # 8080 is the API gateway, 8082 the security service and 8083 energy-monitor-backend when all
   # run on the same machine.
   port: ${SERVER_PORT:8084}
+
+messaging:
+  # Topic exchange of everything this service announces; the routing keys are the message types
+  # (device.linked, device.unlinked, device.connectivity-lost, device.connectivity-restored).
+  # The outbox relay runs every second, up to 50 messages, each confirmed by the broker within 5 s.
+  exchange: energy-monitor.device
+  relay-enabled: true
+  poll-interval: PT1S
+  batch-size: 50
+  confirm-timeout: PT5S
 
 security:
   jwt:
@@ -66,6 +88,9 @@ mqtt:
   keep-alive-interval: 60
   clean-session: true
   connection-timeout: 30
+  # How long a subscribe, unsubscribe or disconnect waits for the broker, and how long a stopping
+  # subscription lets in-flight work finish (Paho waits 30 s for each).
+  completion-timeout: PT5S
   broker-auth:
     # energy-monitor-backend's broker credentials (its MQTT_BACKEND_USER and MQTT_BACKEND_PASS):
     # it may only read the telemetry and status of every device.

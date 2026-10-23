@@ -44,10 +44,34 @@ The topic, not the payload, identifies the device; a message from an unregistere
 unexpected topic or that does not parse is logged and dropped. `mqtt.inbound.enabled=false` turns
 the subscriptions off (the test profile does).
 
+## Events (RabbitMQ)
+
+What other services need to know about a device is published on the topic exchange
+`energy-monitor.device`, through a transactional outbox (`device_outbox`, changelog `device-009`):
+
+| Routing key | Payload | Raised when |
+|---|---|---|
+| `device.linked` | `{deviceId, homeId, deviceName, linkedBy, linkedAt}` | A module is linked, the first time or again |
+| `device.unlinked` | `{deviceId, homeId, unlinkedAt}` | A module is unlinked |
+| `device.connectivity-lost` | `{deviceId, homeId, occurredAt}` | An online device goes offline (status, last will or inactivity) |
+| `device.connectivity-restored` | `{deviceId, homeId, occurredAt}` | An offline device reports again |
+
+- The message is written in the transaction of the change; the connectivity use case runs one
+  transaction per call (`TransactionalDeviceConnectivity`), so the status row and its message
+  commit together.
+- A relay publishes the pending messages every second, oldest first. A message counts as published
+  only when the broker confirms it (correlated confirms) and a queue took it; until the consumer
+  declares its queue it stays pending. The first failure stops the run, so the order holds.
+- `homeId` is the home the device was linked to when the connectivity changed, or null.
+- Settings: `RABBITMQ_*` and `messaging.*`. The test profile turns the relay off and stores the rows
+  already discarded. `RabbitDeviceOutboxPublisherBrokerTest` runs against the RabbitMQ of infra
+  when it is reachable (export `RABBITMQ_USERNAME` and `RABBITMQ_PASSWORD`) and is skipped
+  otherwise.
+
 ## Requirements
 
 - Java 21 (the repository brings `./mvnw`, no Maven install needed).
-- MySQL and Mosquitto from the `infra` repository: the schema is shared with
+- MySQL, RabbitMQ and Mosquitto from the `infra` repository: the schema is shared with
   `energy-monitor-backend` and the security service.
 - The public key of the security service (`SECURITY_JWT_PUBLIC_KEY_PATH`).
 
