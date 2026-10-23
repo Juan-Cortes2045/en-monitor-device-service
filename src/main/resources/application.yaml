@@ -33,6 +33,16 @@ spring:
     # (correlated: the return of an unrouted message is known before the confirmation completes).
     publisher-confirm-type: correlated
     publisher-returns: true
+    listener:
+      simple:
+        # A message that keeps failing is retried three times, one, two and four seconds apart,
+        # and then moved to the dead-letter queue of its queue instead of blocking the ones behind.
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
 
 server:
   # 8080 is the API gateway, 8082 the security service and 8083 energy-monitor-backend when all
@@ -44,6 +54,10 @@ messaging:
   # (device.linked, device.unlinked, device.connectivity-lost, device.connectivity-restored).
   # The outbox relay runs every second, up to 50 messages, each confirmed by the broker within 5 s.
   exchange: energy-monitor.device
+  # Topic exchange energy-monitor-backend publishes the home events to (home.deleted), and the
+  # dead-letter exchange of the queues this service consumes.
+  home-exchange: energy-monitor.home
+  dead-letter-exchange: device-service.dlx
   relay-enabled: true
   poll-interval: PT1S
   batch-size: 50
