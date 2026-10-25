@@ -34,7 +34,8 @@ class BrokerAccessServiceTest {
     };
 
     private final BrokerAccessService service = new BrokerAccessService(devices,
-            "em-device-service", "service-secret", "em-backend", "backend-secret");
+            "em-device-service", "service-secret", "em-backend", "backend-secret",
+            "em-measurement-service", "measurement-secret");
 
     @Test
     void deviceLogsInWithItsCodeAndApiKey() {
@@ -68,9 +69,17 @@ class BrokerAccessServiceTest {
     @Test
     void platformClientWithoutConfiguredPasswordIsRefused() {
         BrokerAccessService unconfigured = new BrokerAccessService(devices, "em-device-service", "",
-                "em-backend", "");
+                "em-backend", "", "em-measurement-service", "");
         assertFalse(unconfigured.authenticate("em-backend", "anything"));
+        assertFalse(unconfigured.authenticate("em-measurement-service", "anything"));
         assertFalse(unconfigured.authenticate("em-device-service", "anything"));
+    }
+
+    @Test
+    void measurementServiceLogsInWithItsConfiguredCredentials() {
+        assertTrue(service.authenticate("em-measurement-service", "measurement-secret"));
+        assertFalse(service.authenticate("em-measurement-service", "backend-secret"));
+        assertFalse(service.authenticate("em-backend", "measurement-secret"));
     }
 
     @Test
@@ -98,6 +107,20 @@ class BrokerAccessServiceTest {
 
         // The commands are this service's now.
         assertFalse(service.authorize("em-backend", "energy-monitor/devices/DEV0000001/command", Access.WRITE));
+    }
+
+    @Test
+    void measurementServiceOnlyReadsTheTelemetryOfEveryDevice() {
+        assertTrue(service.authorize("em-measurement-service", "energy-monitor/devices/+/telemetry", Access.SUBSCRIBE));
+        assertTrue(service.authorize("em-measurement-service", "energy-monitor/devices/DEV0000001/telemetry", Access.READ));
+
+        assertFalse(service.authorize("em-measurement-service", "energy-monitor/devices/+/status", Access.SUBSCRIBE));
+        assertFalse(service.authorize("em-measurement-service", "energy-monitor/devices/DEV0000001/status", Access.READ));
+        assertFalse(service.authorize("em-measurement-service", "energy-monitor/devices/DEV0000001/telemetry", Access.WRITE));
+        assertFalse(service.authorize("em-measurement-service", "energy-monitor/devices/DEV0000001/command", Access.WRITE));
+        assertFalse(service.authorize("em-measurement-service", "energy-monitor/devices/DEV0000001/command", Access.READ));
+        assertFalse(service.authorize("em-measurement-service", "energy-monitor/devices/#", Access.SUBSCRIBE));
+        assertFalse(service.authorize("em-measurement-service", "#", Access.SUBSCRIBE));
     }
 
     @Test
