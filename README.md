@@ -37,9 +37,10 @@ Whether the caller is a member or the owner of the home is asked to energy-monit
 (`GET /internal/homes/{homeId}/access`, with `X-Internal-Token`). Without an answer the request
 gets 503.
 
-The broker knows three kinds of client: this service (`MQTT_DEVICE_SERVICE_USER`, the only one
-that writes commands), energy-monitor-backend (`MQTT_BACKEND_USER`, reads telemetry and status)
-and the devices (device code and API key, only their own topics).
+The broker knows four kinds of client: this service (`MQTT_DEVICE_SERVICE_USER`, the only one
+that writes commands), energy-monitor-backend (`MQTT_BACKEND_USER`, reads telemetry and status),
+the measurement service (`MQTT_MEASUREMENT_SERVICE_USER`, reads only telemetry) and the devices
+(device code and API key, only their own topics).
 
 ## Behind the gateway
 

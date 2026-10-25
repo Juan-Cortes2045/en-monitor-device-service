@@ -64,9 +64,9 @@ device ◄──── AMQP ────► rabbitmq :5672            device.* o
   energy-monitor-backend, which owns homes; no answer refuses the request with 503.
 - **Services**: `/internal/devices/**` and `/internal/homes/**` require an allowed network **and**
   `X-Internal-Token`, compared in constant time; no token configured refuses everything.
-- **Broker**: `/internal/mqtt/**` is open only to the allowed networks. It knows three clients:
+- **Broker**: `/internal/mqtt/**` is open only to the allowed networks. It knows four clients:
   this service (reads telemetry and status, the only one writing commands), the backend (reads
-  only) and each device (its own topics only).
+  only), the measurement service (reads telemetry only) and each device (its own topics only).
 - **Behind the gateway**: the caller address is taken from `X-Forwarded-For` only from loopback
   and the Docker network, so a relayed outside caller cannot reach the internal routes.
 

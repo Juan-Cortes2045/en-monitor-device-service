@@ -124,6 +124,10 @@ mqtt:
     # it may only read the telemetry and status of every device.
     backend-username: ${MQTT_BACKEND_USER:em-backend}
     backend-password: ${MQTT_BACKEND_PASS:}
+    # The measurement service's broker credentials (its MQTT_MEASUREMENT_SERVICE_USER and
+    # MQTT_MEASUREMENT_SERVICE_PASS): it may only read the telemetry of every device.
+    measurement-username: ${MQTT_MEASUREMENT_SERVICE_USER:em-measurement-service}
+    measurement-password: ${MQTT_MEASUREMENT_SERVICE_PASS:}
     # Addresses allowed to call /internal/mqtt/auth/**: loopback and the private range Docker
     # uses, where the broker container lives. Narrow it in production if the network allows it.
     allowed-networks: ${MQTT_AUTH_ALLOWED_NETWORKS:127.0.0.1/32,::1/128,172.16.0.0/12}
