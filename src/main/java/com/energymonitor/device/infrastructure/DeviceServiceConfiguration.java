@@ -50,20 +50,17 @@ public class DeviceServiceConfiguration {
 
     /**
      * This service's broker credentials are the ones it connects with ({@code mqtt.username} /
-     * {@code mqtt.password}), so they are configured once; energy-monitor-backend's are under
-     * {@code mqtt.broker-auth.backend-*} and the measurement service's under
-     * {@code mqtt.broker-auth.measurement-*}, the same values each is given to connect.
+     * {@code mqtt.password}), so they are configured once; the measurement service's are under
+     * {@code mqtt.broker-auth.measurement-*}, the same values it is given to connect.
      */
     @Bean
     public BrokerAccessService brokerAccessService(
             DevicePersistencePort devices,
             @Value("${mqtt.username:}") String serviceUsername,
             @Value("${mqtt.password:}") String servicePassword,
-            @Value("${mqtt.broker-auth.backend-username:}") String backendUsername,
-            @Value("${mqtt.broker-auth.backend-password:}") String backendPassword,
             @Value("${mqtt.broker-auth.measurement-username:}") String measurementUsername,
             @Value("${mqtt.broker-auth.measurement-password:}") String measurementPassword) {
         return new BrokerAccessService(devices, serviceUsername, servicePassword,
-                backendUsername, backendPassword, measurementUsername, measurementPassword);
+                measurementUsername, measurementPassword);
     }
 }
