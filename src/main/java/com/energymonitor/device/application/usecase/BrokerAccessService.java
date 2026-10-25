@@ -11,15 +11,12 @@ import java.util.regex.Pattern;
 /**
  * Authentication and topic ACL for the MQTT broker.
  *
- * <p>Four kinds of client exist:
+ * <p>Three kinds of client exist:
  *
  * <ul>
  *   <li><strong>This service</strong>, with the credentials it connects with. It reads the
  *       telemetry and status topics of every device (connectivity) and is the only client that
  *       writes on a device's command topic.</li>
- *   <li><strong>energy-monitor-backend</strong>, with the credentials configured for it. It may
- *       only subscribe to and read the telemetry and status topics of every device (it stores the
- *       measurements); it writes nothing.</li>
  *   <li><strong>The measurement service</strong>, with the credentials configured for it. It may
  *       only subscribe to and read the telemetry topics of every device (it stores the readings);
  *       not the status, and it writes nothing.</li>
@@ -51,25 +48,20 @@ public class BrokerAccessService implements AuthorizeBrokerAccess {
 
     private final DevicePersistencePort devices;
     private final PlatformClient service;
-    private final PlatformClient backend;
     private final PlatformClient measurement;
 
     /**
-     * @param devices          the device registry, source of the device credentials
-     * @param serviceUsername  the username this service connects with
-     * @param servicePassword  its password
-     * @param backendUsername  the username energy-monitor-backend connects with
-     * @param backendPassword  its password
+     * @param devices             the device registry, source of the device credentials
+     * @param serviceUsername     the username this service connects with
+     * @param servicePassword     its password
      * @param measurementUsername the username the measurement service connects with
      * @param measurementPassword its password
      */
     public BrokerAccessService(DevicePersistencePort devices,
                                String serviceUsername, String servicePassword,
-                               String backendUsername, String backendPassword,
                                String measurementUsername, String measurementPassword) {
         this.devices = devices;
         this.service = new PlatformClient(serviceUsername, servicePassword);
-        this.backend = new PlatformClient(backendUsername, backendPassword);
         this.measurement = new PlatformClient(measurementUsername, measurementPassword);
     }
 
@@ -80,9 +72,6 @@ public class BrokerAccessService implements AuthorizeBrokerAccess {
         }
         if (service.is(username)) {
             return service.accepts(password);
-        }
-        if (backend.is(username)) {
-            return backend.accepts(password);
         }
         if (measurement.is(username)) {
             return measurement.accepts(password);
@@ -102,9 +91,6 @@ public class BrokerAccessService implements AuthorizeBrokerAccess {
                 return COMMAND_TOPIC.matcher(topic).matches();
             }
             return READ_TOPIC.matcher(topic).matches();
-        }
-        if (backend.is(username)) {
-            return access != Access.WRITE && READ_TOPIC.matcher(topic).matches();
         }
         if (measurement.is(username)) {
             return access != Access.WRITE && TELEMETRY_TOPIC.matcher(topic).matches();

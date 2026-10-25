@@ -34,8 +34,7 @@ class BrokerAccessServiceTest {
     };
 
     private final BrokerAccessService service = new BrokerAccessService(devices,
-            "em-device-service", "service-secret", "em-backend", "backend-secret",
-            "em-measurement-service", "measurement-secret");
+            "em-device-service", "service-secret", "em-measurement-service", "measurement-secret");
 
     @Test
     void deviceLogsInWithItsCodeAndApiKey() {
@@ -54,23 +53,24 @@ class BrokerAccessServiceTest {
     }
 
     @Test
-    void backendLogsInWithItsConfiguredCredentials() {
-        assertTrue(service.authenticate("em-backend", "backend-secret"));
-        assertFalse(service.authenticate("em-backend", "device-api-key-123456"));
+    void theRetiredBackendUserNoLongerLogsIn() {
+        // energy-monitor-backend stopped being a broker client: the readings are the measurement
+        // service's. Its old user is just an unknown name now.
+        assertFalse(service.authenticate("em-backend", "backend-secret"));
+        assertFalse(service.authorize("em-backend", "energy-monitor/devices/+/telemetry", Access.SUBSCRIBE));
     }
 
     @Test
     void serviceLogsInWithItsConfiguredCredentials() {
         assertTrue(service.authenticate("em-device-service", "service-secret"));
-        assertFalse(service.authenticate("em-device-service", "backend-secret"));
-        assertFalse(service.authenticate("em-backend", "service-secret"));
+        assertFalse(service.authenticate("em-device-service", "measurement-secret"));
+        assertFalse(service.authenticate("em-measurement-service", "service-secret"));
     }
 
     @Test
     void platformClientWithoutConfiguredPasswordIsRefused() {
         BrokerAccessService unconfigured = new BrokerAccessService(devices, "em-device-service", "",
-                "em-backend", "", "em-measurement-service", "");
-        assertFalse(unconfigured.authenticate("em-backend", "anything"));
+                "em-measurement-service", "");
         assertFalse(unconfigured.authenticate("em-measurement-service", "anything"));
         assertFalse(unconfigured.authenticate("em-device-service", "anything"));
     }
@@ -78,8 +78,7 @@ class BrokerAccessServiceTest {
     @Test
     void measurementServiceLogsInWithItsConfiguredCredentials() {
         assertTrue(service.authenticate("em-measurement-service", "measurement-secret"));
-        assertFalse(service.authenticate("em-measurement-service", "backend-secret"));
-        assertFalse(service.authenticate("em-backend", "measurement-secret"));
+        assertFalse(service.authenticate("em-measurement-service", "device-api-key-123456"));
     }
 
     @Test
@@ -92,21 +91,6 @@ class BrokerAccessServiceTest {
         assertFalse(service.authorize("EM204", "energy-monitor/devices/DEV0000001/telemetry", Access.READ));
         assertFalse(service.authorize("EM204", "energy-monitor/devices/+/telemetry", Access.SUBSCRIBE));
         assertFalse(service.authorize("EM204", "#", Access.SUBSCRIBE));
-    }
-
-    @Test
-    void backendOnlyReadsEveryDevice() {
-        assertTrue(service.authorize("em-backend", "energy-monitor/devices/+/telemetry", Access.SUBSCRIBE));
-        assertTrue(service.authorize("em-backend", "energy-monitor/devices/+/status", Access.SUBSCRIBE));
-        assertTrue(service.authorize("em-backend", "energy-monitor/devices/DEV0000001/telemetry", Access.READ));
-
-        assertFalse(service.authorize("em-backend", "energy-monitor/devices/DEV0000001/telemetry", Access.WRITE));
-        assertFalse(service.authorize("em-backend", "#", Access.SUBSCRIBE));
-        assertFalse(service.authorize("em-backend", "energy-monitor/devices/#", Access.SUBSCRIBE));
-        assertFalse(service.authorize("em-backend", "$SYS/broker/uptime", Access.READ));
-
-        // The commands are this service's now.
-        assertFalse(service.authorize("em-backend", "energy-monitor/devices/DEV0000001/command", Access.WRITE));
     }
 
     @Test

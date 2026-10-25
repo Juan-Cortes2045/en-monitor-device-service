@@ -98,8 +98,8 @@ mqtt:
   # This service connects over the plain listener: the broker runs next to it, so this connection
   # never leaves the host; devices use TLS.
   broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
-  # Suffixed per client (-commands, -telemetry, -status). Must differ per instance and from
-  # energy-monitor-backend's, which subscribes to the same topics.
+  # Suffixed per client (-commands, -telemetry, -status). Must differ per instance and from the
+  # measurement service's, which subscribes to the telemetry too.
   client-id: ${MQTT_CLIENT_ID:device-service}
   # Also the credentials the broker accepts for this service: the broker asks
   # /internal/mqtt/auth/user, and these are compared there, so they live in one place.
@@ -120,10 +120,6 @@ mqtt:
   # subscription lets in-flight work finish (Paho waits 30 s for each).
   completion-timeout: PT5S
   broker-auth:
-    # energy-monitor-backend's broker credentials (its MQTT_BACKEND_USER and MQTT_BACKEND_PASS):
-    # it may only read the telemetry and status of every device.
-    backend-username: ${MQTT_BACKEND_USER:em-backend}
-    backend-password: ${MQTT_BACKEND_PASS:}
     # The measurement service's broker credentials (its MQTT_MEASUREMENT_SERVICE_USER and
     # MQTT_MEASUREMENT_SERVICE_PASS): it may only read the telemetry of every device.
     measurement-username: ${MQTT_MEASUREMENT_SERVICE_USER:em-measurement-service}

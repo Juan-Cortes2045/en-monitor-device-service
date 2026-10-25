@@ -20,15 +20,16 @@ the security service. The design and the decisions are in
 | `GET /api/v1/appliance-types` | idem | Appliance catalogue |
 | `POST /internal/mqtt/auth/user`, `/acl` | Mosquitto (go-auth) | Who may connect and what each client may read or write |
 
-### Internal API (for energy-monitor-backend)
+### Internal API (for energy-monitor-backend and the measurement service)
 
 | Path | Answer |
 |---|---|
 | `GET /internal/devices/{deviceId}` | `200` with `{idDevice, name, applianceTypeId, location, description, installationDate, deviceCode, homeId}` (`homeId` null when it is linked to no home), or `404` |
 | `GET /internal/homes/{homeId}/devices` | `200` with the devices linked to the home, an empty list when it has none |
 
-The backend reads them for the ingestion of readings, the alerts, the notifications and the
-recommendations. These paths have their own filter chain: the caller must come from
+energy-monitor-backend reads them for the alerts, the notifications and the recommendations, and
+en-monitor-measurement-service to know whether a reading's device exists and which devices a home
+has. These paths have their own filter chain: the caller must come from
 `INTERNAL_API_ALLOWED_NETWORKS` **and** send `INTERNAL_API_TOKEN` in `X-Internal-Token`; without a
 token configured every call is refused. A user's access token does not open them. The reverse proxy
 and the gateway never forward `/internal/**`.
@@ -37,10 +38,11 @@ Whether the caller is a member or the owner of the home is asked to energy-monit
 (`GET /internal/homes/{homeId}/access`, with `X-Internal-Token`). Without an answer the request
 gets 503.
 
-The broker knows four kinds of client: this service (`MQTT_DEVICE_SERVICE_USER`, the only one
-that writes commands), energy-monitor-backend (`MQTT_BACKEND_USER`, reads telemetry and status),
-the measurement service (`MQTT_MEASUREMENT_SERVICE_USER`, reads only telemetry) and the devices
-(device code and API key, only their own topics).
+The broker knows three kinds of client: this service (`MQTT_DEVICE_SERVICE_USER`, reads telemetry
+and status and is the only one that writes commands), the measurement service
+(`MQTT_MEASUREMENT_SERVICE_USER`, reads only telemetry, to store the readings) and the devices
+(device code and API key, only their own topics). energy-monitor-backend is no longer a broker
+client: it hears each reading from the measurement service over RabbitMQ.
 
 ## Behind the gateway
 
@@ -62,8 +64,8 @@ This service subscribes to `energy-monitor/devices/+/telemetry` and `energy-moni
 with its own MQTT user and client ids (`${MQTT_CLIENT_ID}-telemetry` and `-status`):
 
 - every telemetry message marks the device `ONLINE` and refreshes `last_seen` with the server
-  clock (the reading itself is stored by energy-monitor-backend, which subscribes to the same
-  topic);
+  clock (the reading itself is stored by en-monitor-measurement-service, which subscribes to the
+  same topic with its own user);
 - the retained `online` / `offline` status, including the last will the broker publishes when a
   module drops, opens a new row in `device_status_log`;
 - a device not heard from for `DEVICE_OFFLINE_AFTER` (150 s) is marked `OFFLINE` by the
@@ -116,7 +118,7 @@ What other services need to know about a device is published on the topic exchan
 
 - Java 21 (the repository brings `./mvnw`, no Maven install needed).
 - MySQL, RabbitMQ and Mosquitto from the `infra` repository: the schema is shared with
-  `energy-monitor-backend` and the security service.
+  `energy-monitor-backend`, the security service and the measurement service.
 - The public key of the security service (`SECURITY_JWT_PUBLIC_KEY_PATH`).
 
 ## Run locally
@@ -145,8 +147,8 @@ docker build -t energy-monitor-device .
 
 Multi-stage build (Maven on JDK 21, then JRE 21), running as uid 10001. The infra repository
 builds it as `device` (`infra/docker-compose.yml`, `infra/docker-compose.prod.yml`): no published
-port, `public.pem` only, health on `/actuator/health`. Mosquitto, the gateway and the backend
-reach it as `device:8084`.
+port, `public.pem` only, health on `/actuator/health`. Mosquitto, the gateway, the backend and the
+measurement service reach it as `device:8084`.
 
 `.github/workflows/ci-cd.yml`:
 
