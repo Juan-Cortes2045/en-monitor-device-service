@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 /**
  * Authentication and topic ACL for the MQTT broker.
  *
- * <p>Three kinds of client exist:
+ * <p>Four kinds of client exist:
  *
  * <ul>
  *   <li><strong>This service</strong>, with the credentials it connects with. It reads the
@@ -20,6 +20,9 @@ import java.util.regex.Pattern;
  *   <li><strong>energy-monitor-backend</strong>, with the credentials configured for it. It may
  *       only subscribe to and read the telemetry and status topics of every device (it stores the
  *       measurements); it writes nothing.</li>
+ *   <li><strong>The measurement service</strong>, with the credentials configured for it. It may
+ *       only subscribe to and read the telemetry topics of every device (it stores the readings);
+ *       not the status, and it writes nothing.</li>
  *   <li><strong>A device</strong>, which logs in with its {@code device_code} as username and its
  *       API key as password; only the key's hash is stored ({@code ApiKeyHash}). It may only
  *       publish on its own two topics and read its own command topic, so a device cannot
@@ -38,6 +41,10 @@ public class BrokerAccessService implements AuthorizeBrokerAccess {
     private static final Pattern READ_TOPIC =
             Pattern.compile(Pattern.quote(TOPIC_PREFIX) + "(\\+|[^/+#]+)/(telemetry|status)");
 
+    /** A concrete telemetry topic or its {@code +} subscription filter. */
+    private static final Pattern TELEMETRY_TOPIC =
+            Pattern.compile(Pattern.quote(TOPIC_PREFIX) + "(\\+|[^/+#]+)/telemetry");
+
     /** The command topic of one device, which only this service writes. */
     private static final Pattern COMMAND_TOPIC =
             Pattern.compile(Pattern.quote(TOPIC_PREFIX) + "[^/+#]+/command");
@@ -45,6 +52,7 @@ public class BrokerAccessService implements AuthorizeBrokerAccess {
     private final DevicePersistencePort devices;
     private final PlatformClient service;
     private final PlatformClient backend;
+    private final PlatformClient measurement;
 
     /**
      * @param devices          the device registry, source of the device credentials
@@ -52,13 +60,17 @@ public class BrokerAccessService implements AuthorizeBrokerAccess {
      * @param servicePassword  its password
      * @param backendUsername  the username energy-monitor-backend connects with
      * @param backendPassword  its password
+     * @param measurementUsername the username the measurement service connects with
+     * @param measurementPassword its password
      */
     public BrokerAccessService(DevicePersistencePort devices,
                                String serviceUsername, String servicePassword,
-                               String backendUsername, String backendPassword) {
+                               String backendUsername, String backendPassword,
+                               String measurementUsername, String measurementPassword) {
         this.devices = devices;
         this.service = new PlatformClient(serviceUsername, servicePassword);
         this.backend = new PlatformClient(backendUsername, backendPassword);
+        this.measurement = new PlatformClient(measurementUsername, measurementPassword);
     }
 
     @Override
@@ -71,6 +83,9 @@ public class BrokerAccessService implements AuthorizeBrokerAccess {
         }
         if (backend.is(username)) {
             return backend.accepts(password);
+        }
+        if (measurement.is(username)) {
+            return measurement.accepts(password);
         }
         return devices.findByDeviceCode(username)
                 .map(device -> device.acceptsApiKey(password))
@@ -90,6 +105,9 @@ public class BrokerAccessService implements AuthorizeBrokerAccess {
         }
         if (backend.is(username)) {
             return access != Access.WRITE && READ_TOPIC.matcher(topic).matches();
+        }
+        if (measurement.is(username)) {
+            return access != Access.WRITE && TELEMETRY_TOPIC.matcher(topic).matches();
         }
         Optional<Device> device = devices.findByDeviceCode(username);
         if (device.isEmpty()) {
