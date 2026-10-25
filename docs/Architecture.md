@@ -52,6 +52,7 @@ com.energymonitor.device
 web / mobile ──► gateway :8080 ──► device :8084   /api/v1/homes/*/devices/**, /api/v1/appliance-types/**
 mosquitto ───────────────────────► device :8084   /internal/mqtt/auth/user, /acl
 backend :8083 ───────────────────► device :8084   /internal/devices/**, /internal/homes/**
+measurement :8085 ───────────────► device :8084   /internal/devices/**, /internal/homes/**
 device :8084 ────────────────────► backend :8083  /internal/homes/{homeId}/access
 device ◄──── MQTT ────► mosquitto :1883           telemetry and status in, commands out
 device ◄──── AMQP ────► rabbitmq :5672            device.* out, home.deleted in
@@ -64,9 +65,10 @@ device ◄──── AMQP ────► rabbitmq :5672            device.* o
   energy-monitor-backend, which owns homes; no answer refuses the request with 503.
 - **Services**: `/internal/devices/**` and `/internal/homes/**` require an allowed network **and**
   `X-Internal-Token`, compared in constant time; no token configured refuses everything.
-- **Broker**: `/internal/mqtt/**` is open only to the allowed networks. It knows four clients:
-  this service (reads telemetry and status, the only one writing commands), the backend (reads
-  only), the measurement service (reads telemetry only) and each device (its own topics only).
+- **Broker**: `/internal/mqtt/**` is open only to the allowed networks. It knows three clients:
+  this service (reads telemetry and status, the only one writing commands), the measurement
+  service (reads telemetry only, to store the readings) and each device (its own topics only).
+  The backend is no longer a broker client.
 - **Behind the gateway**: the caller address is taken from `X-Forwarded-For` only from loopback
   and the Docker network, so a relayed outside caller cannot reach the internal routes.
 
@@ -74,8 +76,8 @@ device ◄──── AMQP ────► rabbitmq :5672            device.* o
 
 Telemetry marks a registered device `ONLINE` and refreshes `last_seen`; the retained status
 (including the last will) opens a row in `device_status_log`; the inactivity check marks it
-`OFFLINE` after `DEVICE_OFFLINE_AFTER`. The backend subscribes to the same telemetry to store the
-readings: one topic, two consumers, each with its own client id.
+`OFFLINE` after `DEVICE_OFFLINE_AFTER`. en-monitor-measurement-service subscribes to the same
+telemetry to store the readings: one topic, two consumers, each with its own user and client id.
 
 ## Messaging
 
@@ -94,6 +96,8 @@ readings: one topic, two consumers, each with its own client id.
   `device-service.dlx` after three attempts; a second delivery finds nothing to unlink.
 - energy-monitor-backend consumes the device events on `energy-monitor-backend.device.events`:
   connectivity feeds its alerts, links and unlinks drop its device cache.
+- en-monitor-measurement-service consumes `device.linked` and `device.unlinked` on
+  `measurement-service.device.events` to drop its device cache.
 
 ## Database
 
@@ -130,7 +134,10 @@ The platform decisions (shared schema, event transport, gateway, MQTT broker) ar
 | 5 | Internal device API; the backend reads devices over HTTP with a cache and hears the events | Done |
 | 6 | `device` module removed from energy-monitor-backend; it keeps a cached proxy | Done |
 | 7 | Gateway routes, infra (container, Mosquitto pointing here), forwarded headers, image and CI/CD | Done |
-| 8 | Documentation and end-to-end check of the whole stack | In progress |
+| 8 | Documentation and end-to-end check of the whole stack (`infra/e2e/device-flow.sh`) | Done |
+
+In production since 24-Oct-2026. The measurement extraction later moved the storage of the
+readings to en-monitor-measurement-service and retired the backend's broker user.
 
 ## Working principles
 
