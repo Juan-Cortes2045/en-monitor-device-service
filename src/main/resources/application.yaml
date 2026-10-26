@@ -65,7 +65,7 @@ messaging:
   # (device.linked, device.unlinked, device.connectivity-lost, device.connectivity-restored).
   # The outbox relay runs every second, up to 50 messages, each confirmed by the broker within 5 s.
   exchange: energy-monitor.device
-  # Topic exchange energy-monitor-backend publishes the home events to (home.deleted), and the
+  # Topic exchange the home service publishes the home events to (home.deleted), and the
   # dead-letter exchange of the queues this service consumes.
   home-exchange: energy-monitor.home
   dead-letter-exchange: device-service.dlx

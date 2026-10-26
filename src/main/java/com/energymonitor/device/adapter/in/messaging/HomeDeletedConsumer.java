@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Unlinks the modules of a home energy-monitor-backend deleted.
+ * Unlinks the modules of a home the home service deleted.
  *
  * <p>The deletion is already committed when the message arrives, so the unlinking runs in a
  * transaction of its own ({@code HomeDeviceService} is transactional), and the MQTT unlink command
