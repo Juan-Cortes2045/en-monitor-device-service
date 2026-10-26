@@ -24,12 +24,12 @@ import org.springframework.web.client.RestClient;
 @DisplayName("Home access over HTTP")
 class HttpHomeAccessAdapterTest {
 
-    private static final String ACCESS = "http://backend/internal/homes/hom0000001/access?userId=use0000001";
+    private static final String ACCESS = "http://home/internal/homes/hom0000001/access?userId=use0000001";
 
     private final RestClient.Builder builder = RestClient.builder()
-            .baseUrl("http://backend")
+            .baseUrl("http://home")
             .defaultHeader("X-Internal-Token", "secret");
-    private final MockRestServiceServer backend = MockRestServiceServer.bindTo(builder).build();
+    private final MockRestServiceServer homeService = MockRestServiceServer.bindTo(builder).build();
     private final HttpHomeAccessAdapter homes = new HttpHomeAccessAdapter(builder.build());
 
     private static String body(boolean exists, boolean member, boolean owner) {
@@ -39,18 +39,18 @@ class HttpHomeAccessAdapterTest {
     @Test
     @DisplayName("an owner's answer comes back as such, with the internal token")
     void owner() {
-        backend.expect(requestTo(ACCESS)).andExpect(method(HttpMethod.GET))
+        homeService.expect(requestTo(ACCESS)).andExpect(method(HttpMethod.GET))
                 .andExpect(header("X-Internal-Token", "secret"))
                 .andRespond(withSuccess(body(true, true, true), MediaType.APPLICATION_JSON));
 
         assertThat(homes.access("use0000001", "hom0000001")).isEqualTo(new HomeAccess(true, true, true));
-        backend.verify();
+        homeService.verify();
     }
 
     @Test
     @DisplayName("a member is not an owner")
     void member() {
-        backend.expect(requestTo(ACCESS))
+        homeService.expect(requestTo(ACCESS))
                 .andRespond(withSuccess(body(true, true, false), MediaType.APPLICATION_JSON));
 
         assertThat(homes.access("use0000001", "hom0000001")).isEqualTo(new HomeAccess(true, true, false));
@@ -59,7 +59,7 @@ class HttpHomeAccessAdapterTest {
     @Test
     @DisplayName("no right is kept on a home that does not exist")
     void missingHome() {
-        backend.expect(requestTo(ACCESS))
+        homeService.expect(requestTo(ACCESS))
                 .andRespond(withSuccess(body(false, true, true), MediaType.APPLICATION_JSON));
 
         assertThat(homes.access("use0000001", "hom0000001")).isEqualTo(HomeAccess.NONE);
@@ -70,13 +70,13 @@ class HttpHomeAccessAdapterTest {
     void nothingToAsk() {
         assertThat(homes.access(null, "hom0000001")).isEqualTo(HomeAccess.NONE);
         assertThat(homes.access("use0000001", null)).isEqualTo(HomeAccess.NONE);
-        backend.verify();
+        homeService.verify();
     }
 
     @Test
     @DisplayName("a refused token is no answer")
     void forbidden() {
-        backend.expect(requestTo(ACCESS)).andRespond(withStatus(HttpStatus.FORBIDDEN));
+        homeService.expect(requestTo(ACCESS)).andRespond(withStatus(HttpStatus.FORBIDDEN));
 
         assertThatThrownBy(() -> homes.access("use0000001", "hom0000001"))
                 .isInstanceOf(HomeServiceUnavailableException.class);
@@ -85,16 +85,16 @@ class HttpHomeAccessAdapterTest {
     @Test
     @DisplayName("a server error is no answer")
     void serverError() {
-        backend.expect(requestTo(ACCESS)).andRespond(withServerError());
+        homeService.expect(requestTo(ACCESS)).andRespond(withServerError());
 
         assertThatThrownBy(() -> homes.access("use0000001", "hom0000001"))
                 .isInstanceOf(HomeServiceUnavailableException.class);
     }
 
     @Test
-    @DisplayName("an unreachable backend is no answer")
+    @DisplayName("an unreachable home service is no answer")
     void unreachable() {
-        backend.expect(requestTo(ACCESS)).andRespond(withException(new IOException("refused")));
+        homeService.expect(requestTo(ACCESS)).andRespond(withException(new IOException("refused")));
 
         assertThatThrownBy(() -> homes.access("use0000001", "hom0000001"))
                 .isInstanceOf(HomeServiceUnavailableException.class);
