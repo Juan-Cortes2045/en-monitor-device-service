@@ -35,7 +35,7 @@ com.energymonitor.device
 │       ├── mqtt            → Commands to the modules (Paho)
 │       ├── messaging       → Transactional outbox, relay and RabbitMQ publisher
 │       ├── event           → Writes the domain events to the outbox
-│       ├── home            → Asks energy-monitor-backend about home access (HTTP)
+│       ├── home            → Asks the home service about home access (HTTP)
 │       └── generator       → Identifiers and API keys
 └── infrastructure          → Spring wiring: filter chains, JWT validation, internal API,
                               messaging, transactions, configuration properties
@@ -53,7 +53,7 @@ web / mobile ──► gateway :8080 ──► device :8084   /api/v1/homes/*/de
 mosquitto ───────────────────────► device :8084   /internal/mqtt/auth/user, /acl
 backend :8083 ───────────────────► device :8084   /internal/devices/**, /internal/homes/**
 measurement :8085 ───────────────► device :8084   /internal/devices/**, /internal/homes/**
-device :8084 ────────────────────► backend :8083  /internal/homes/{homeId}/access
+device :8084 ────────────────────► home :8086     /internal/homes/{homeId}/access
 device ◄──── MQTT ────► mosquitto :1883           telemetry and status in, commands out
 device ◄──── AMQP ────► rabbitmq :5672            device.* out, home.deleted in
 ```
@@ -61,8 +61,8 @@ device ◄──── AMQP ────► rabbitmq :5672            device.* o
 ## Tokens and callers
 
 - **Users**: the security service signs the access tokens (RS256); this service validates them
-  with its public key and issuer. Membership and ownership of a home are asked to
-  energy-monitor-backend, which owns homes; no answer refuses the request with 503.
+  with its public key and issuer. Membership and ownership of a home are asked to the home
+  service, which owns homes; no answer refuses the request with 503.
 - **Services**: `/internal/devices/**` and `/internal/homes/**` require an allowed network **and**
   `X-Internal-Token`, compared in constant time; no token configured refuses everything.
 - **Broker**: `/internal/mqtt/**` is open only to the allowed networks. It knows three clients:
