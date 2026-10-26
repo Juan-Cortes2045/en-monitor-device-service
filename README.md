@@ -110,8 +110,8 @@ What other services need to know about a device is published on the topic exchan
   instead of blocking the queue. A message without a `homeId` is dropped.
 - A message may arrive twice: the second delivery finds no module linked to the home and does
   nothing.
-- Declaring the queue is what lets energy-monitor-backend publish `home.deleted`: until it exists,
-  the message waits in the backend's `home_outbox`.
+- Declaring the queue is what lets the home service publish `home.deleted`: until it exists,
+  the message waits in its `home_outbox`.
 - The test profile does not start the consumers.
 
 ## Requirements

@@ -119,7 +119,8 @@ The platform decisions (shared schema, event transport, gateway, MQTT broker) ar
   user, so device state does not depend on the backend.
 - **Reads over internal HTTP with a cache**: the backend caches devices 30 s (unknown ones too)
   and falls back to a stale copy up to 1 h, instead of reading the device tables.
-- **Home deletion as an event**: `home.deleted` from the backend's outbox, not a synchronous call.
+- **Home deletion as an event**: `home.deleted` from the home service's outbox (the backend's until
+  its home module moved there), not a synchronous call.
 - **Trade-off**: Mosquitto depends on this service. While it is down new MQTT logins are refused
   and connected modules publish only while the broker's cached ACL decisions last (5 min).
 
