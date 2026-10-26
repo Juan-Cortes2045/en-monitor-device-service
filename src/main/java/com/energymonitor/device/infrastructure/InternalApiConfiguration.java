@@ -17,17 +17,17 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.client.RestClient;
 
 /**
- * The calls between this service and energy-monitor-backend, both ways.
+ * The calls between this service and the others, both ways.
  *
  * <p>Inbound, {@code /internal/devices/**} and {@code /internal/homes/**} get their own filter
- * chain, evaluated before the API chain: the backend presents no JWT, so it is trusted by network
- * and shared token instead (see {@link InternalCallerCheck}). Anything else is answered 403. The
- * broker's {@code /internal/mqtt/**} has a chain of its own, by network only. The reverse proxy
- * must not forward {@code /internal/**} at all, since behind it every request seems to come from
- * the proxy.
+ * chain, evaluated before the API chain: energy-monitor-backend and the measurement service
+ * present no JWT, so they are trusted by network and shared token instead (see
+ * {@link InternalCallerCheck}). Anything else is answered 403. The broker's
+ * {@code /internal/mqtt/**} has a chain of its own, by network only. The reverse proxy must not
+ * forward {@code /internal/**} at all, since behind it every request seems to come from the proxy.
  *
- * <p>Outbound, whether a caller belongs to or owns a home. Those calls carry the same token, which
- * the backend checks together with this service's network.
+ * <p>Outbound, whether a caller belongs to or owns a home, asked to the home service. Those calls
+ * carry the same token, which the home service checks together with this service's network.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(InternalApiProperties.class)
@@ -62,7 +62,7 @@ public class InternalApiConfiguration {
         requests.setConnectTimeout(properties.connectTimeout());
         requests.setReadTimeout(properties.readTimeout());
         RestClient client = RestClient.builder()
-                .baseUrl(properties.backendUrl().toString())
+                .baseUrl(properties.homeServiceUrl().toString())
                 .requestFactory(requests)
                 .defaultHeader(InternalApiProperties.TOKEN_HEADER,
                         properties.token() == null ? "" : properties.token())

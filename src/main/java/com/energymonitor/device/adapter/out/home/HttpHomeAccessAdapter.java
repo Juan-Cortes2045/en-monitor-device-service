@@ -7,20 +7,20 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 /**
- * Asks energy-monitor-backend {@code GET /internal/homes/{homeId}/access?userId=...}, which answers
+ * Asks the home service {@code GET /internal/homes/{homeId}/access?userId=...}, which answers
  * 200 with {@code {"exists":..,"member":..,"owner":..}}. Anything else, or no answer within the
  * timeouts, is reported as unavailable: a device is never linked or listed without knowing the
  * caller may.
  */
 public class HttpHomeAccessAdapter implements HomeLookupPort {
 
-    private final RestClient backend;
+    private final RestClient homes;
 
     /**
-     * @param backend client with the backend's base URL, the timeouts and the internal token
+     * @param homes client with the home service's base URL, the timeouts and the internal token
      */
-    public HttpHomeAccessAdapter(RestClient backend) {
-        this.backend = backend;
+    public HttpHomeAccessAdapter(RestClient homes) {
+        this.homes = homes;
     }
 
     @Override
@@ -29,7 +29,7 @@ public class HttpHomeAccessAdapter implements HomeLookupPort {
             return HomeAccess.NONE;
         }
         try {
-            return backend.get()
+            return homes.get()
                     .uri("/internal/homes/{homeId}/access?userId={userId}", homeId, userId)
                     .exchange((request, response) -> {
                         if (!response.getStatusCode().isSameCodeAs(HttpStatus.OK)) {

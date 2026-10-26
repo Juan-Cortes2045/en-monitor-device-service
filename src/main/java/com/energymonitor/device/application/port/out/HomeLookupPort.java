@@ -2,7 +2,7 @@ package com.energymonitor.device.application.port.out;
 
 /**
  * Port to ask the Home context what a caller may do in a home. Homes and their members belong to
- * energy-monitor-backend, so this service never keeps a copy of them.
+ * the home service, so this service never keeps a copy of them.
  */
 public interface HomeLookupPort {
 
@@ -11,7 +11,7 @@ public interface HomeLookupPort {
      * @param homeId the home in the path
      * @return whether the home exists and the caller belongs to it or owns it
      * @throws com.energymonitor.device.application.exception.HomeServiceUnavailableException when
-     *         energy-monitor-backend does not answer
+     *         the home service does not answer
      */
     HomeAccess access(String userId, String homeId);
 
