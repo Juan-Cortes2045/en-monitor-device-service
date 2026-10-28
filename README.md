@@ -34,9 +34,9 @@ has. These paths have their own filter chain: the caller must come from
 token configured every call is refused. A user's access token does not open them. The reverse proxy
 and the gateway never forward `/internal/**`.
 
-Whether the caller is a member or the owner of the home is asked to energy-monitor-backend
-(`GET /internal/homes/{homeId}/access`, with `X-Internal-Token`). Without an answer the request
-gets 503.
+Whether the caller is a member or the owner of the home is asked to the home service
+(`GET /internal/homes/{homeId}/access`, with `X-Internal-Token`, at `HOME_SERVICE_URL`). Without
+an answer the request gets 503.
 
 The broker knows three kinds of client: this service (`MQTT_DEVICE_SERVICE_USER`, reads telemetry
 and status and is the only one that writes commands), the measurement service
@@ -110,8 +110,8 @@ What other services need to know about a device is published on the topic exchan
   instead of blocking the queue. A message without a `homeId` is dropped.
 - A message may arrive twice: the second delivery finds no module linked to the home and does
   nothing.
-- Declaring the queue is what lets energy-monitor-backend publish `home.deleted`: until it exists,
-  the message waits in the backend's `home_outbox`.
+- Declaring the queue is what lets the home service publish `home.deleted`: until it exists,
+  the message waits in its `home_outbox`.
 - The test profile does not start the consumers.
 
 ## Requirements

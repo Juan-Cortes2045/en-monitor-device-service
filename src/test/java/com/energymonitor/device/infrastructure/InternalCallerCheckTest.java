@@ -14,7 +14,7 @@ class InternalCallerCheckTest {
 
     private static InternalCallerCheck check(String token) {
         return new InternalCallerCheck(new InternalApiProperties(token, List.of("127.0.0.1/32", "172.16.0.0/12"),
-                URI.create("http://localhost:8083"), Duration.ofSeconds(1), Duration.ofSeconds(2)));
+                URI.create("http://localhost:8086"), Duration.ofSeconds(1), Duration.ofSeconds(2)));
     }
 
     private static MockHttpServletRequest request(String address, String token) {

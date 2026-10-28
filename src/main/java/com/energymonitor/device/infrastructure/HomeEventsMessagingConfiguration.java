@@ -11,11 +11,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * The queue through which this service hears that energy-monitor-backend deleted a home, so the
+ * The queue through which this service hears that the home service deleted a home, so the
  * modules linked to it are unlinked and told to offer Bluetooth again.
  *
  * <p>Durable, and dead-lettered to {@value #HOME_DELETED_QUEUE}{@code .dlq} once a message has
- * failed every retry. Declaring it is also what lets the backend's outbox publish
+ * failed every retry. Declaring it is also what lets the home service's outbox publish
  * {@code home.deleted}: until a queue is bound the message comes back and waits.
  */
 @Configuration(proxyBeanMethods = false)
